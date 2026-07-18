@@ -1,0 +1,114 @@
+/**
+ * Client for the FastAPI brain.
+ * All LLM calls go through this — never embed Anthropic keys in the app.
+ */
+
+import {CONFIG} from '../config';
+
+export type HistoryTurn = {role: 'user' | 'assistant'; content: string};
+
+export type ActionPayload =
+  | {type: 'none'}
+  | {
+      type: 'create_calendar_event';
+      title: string;
+      start_iso: string;
+      end_iso: string;
+      notes?: string | null;
+      all_day?: boolean;
+    }
+  | {
+      type: 'send_message';
+      channel: 'whatsapp' | 'sms' | 'email';
+      recipient: string;
+      body: string;
+      subject?: string | null;
+    };
+
+export type ReplyResponse = {
+  reply_text: string;
+  action: ActionPayload;
+  session_id: string;
+};
+
+export type ReplyRequest = {
+  transcript: string;
+  session_id: string;
+  history: HistoryTurn[];
+  client_now_iso: string;
+  client_timezone: string;
+  quiet_mode: boolean;
+  relationships: Record<string, string>;
+};
+
+function baseUrl(): string {
+  return CONFIG.backendBaseUrl.replace(/\/$/, '');
+}
+
+export async function healthCheck(): Promise<{
+  status: string;
+  has_api_key: boolean;
+  model: string;
+}> {
+  const res = await fetch(`${baseUrl()}/health`);
+  if (!res.ok) {
+    throw new Error(`health ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function requestReply(body: ReplyRequest): Promise<ReplyResponse> {
+  const res = await fetch(`${baseUrl()}/reply`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`/reply ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+export async function clearServerSession(sessionId: string): Promise<void> {
+  await fetch(`${baseUrl()}/session/clear`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({session_id: sessionId}),
+  });
+}
+
+export async function fetchCheckInPrompt(): Promise<string> {
+  try {
+    const res = await fetch(`${baseUrl()}/check-in-prompt`);
+    if (!res.ok) {
+      return "Hey — just checking in. How's it going?";
+    }
+    const data = await res.json();
+    return data.prompt || "Hey — just checking in. How's it going?";
+  } catch {
+    return "Hey — just checking in. How's it going?";
+  }
+}
+
+/** Best-effort IANA timezone; falls back to offset string. */
+export function getClientTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || offsetTimezone();
+  } catch {
+    return offsetTimezone();
+  }
+}
+
+function offsetTimezone(): string {
+  const offsetMin = -new Date().getTimezoneOffset();
+  const sign = offsetMin >= 0 ? '+' : '-';
+  const abs = Math.abs(offsetMin);
+  const h = String(Math.floor(abs / 60)).padStart(2, '0');
+  const m = String(abs % 60).padStart(2, '0');
+  return `UTC${sign}${h}:${m}`;
+}
+
+export function clientNowIso(): string {
+  return new Date().toISOString();
+}

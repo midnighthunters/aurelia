@@ -1,0 +1,37 @@
+# Dependencies / build
+node_modules/
+**/node_modules/
+app/android/.gradle/
+app/android/app/build/
+app/android/build/
+app/ios/Pods/
+app/ios/build/
+*.jsbundle
+
+# Python
+backend/.venv/
+backend/venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+backend/.env
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Logs / local metrics
+*.log
+app/android/local.properties
+
+# RN
+app/.metro-health-check*
+*.hprof
