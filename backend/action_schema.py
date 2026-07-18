@@ -21,6 +21,14 @@ class ActionType(str, Enum):
     NONE = "none"
     CREATE_CALENDAR_EVENT = "create_calendar_event"
     SEND_MESSAGE = "send_message"
+    CLICK = "click"
+    LONG_CLICK = "long_click"
+    TYPE_TEXT = "type_text"
+    SCROLL = "scroll"
+    TAP_COORDINATE = "tap_coordinate"
+    SWIPE_COORDINATE = "swipe_coordinate"
+    NAVIGATE = "navigate"
+    WAIT = "wait"
 
 
 class MessageChannel(str, Enum):
@@ -48,11 +56,72 @@ class SendMessageAction(BaseModel):
     subject: Optional[str] = None  # email only
 
 
+class ClickAction(BaseModel):
+    type: Literal["click"] = "click"
+    view_id: Optional[str] = None
+    text: Optional[str] = None
+
+
+class LongClickAction(BaseModel):
+    type: Literal["long_click"] = "long_click"
+    view_id: Optional[str] = None
+    text: Optional[str] = None
+
+
+class TypeTextAction(BaseModel):
+    type: Literal["type_text"] = "type_text"
+    view_id: Optional[str] = None
+    text: Optional[str] = None
+    value: str
+
+
+class ScrollAction(BaseModel):
+    type: Literal["scroll"] = "scroll"
+    direction: str = "down"  # "up" | "down"
+
+
+class TapCoordinateAction(BaseModel):
+    type: Literal["tap_coordinate"] = "tap_coordinate"
+    x: float
+    y: float
+
+
+class SwipeCoordinateAction(BaseModel):
+    type: Literal["swipe_coordinate"] = "swipe_coordinate"
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+    duration_ms: int = 300
+
+
+class NavigateAction(BaseModel):
+    type: Literal["navigate"] = "navigate"
+    action: str = "back"  # "back" | "home" | "recents" | "notifications"
+
+
+class WaitAction(BaseModel):
+    type: Literal["wait"] = "wait"
+    ms: int = 1000
+
+
 class NoAction(BaseModel):
     type: Literal["none"] = "none"
 
 
-ActionPayload = CalendarEventAction | SendMessageAction | NoAction
+ActionPayload = (
+    CalendarEventAction
+    | SendMessageAction
+    | ClickAction
+    | LongClickAction
+    | TypeTextAction
+    | ScrollAction
+    | TapCoordinateAction
+    | SwipeCoordinateAction
+    | NavigateAction
+    | WaitAction
+    | NoAction
+)
 
 
 class ReplyRequest(BaseModel):
@@ -104,6 +173,55 @@ def parse_action(raw: dict[str, Any] | None) -> dict[str, Any]:
             recipient=str(raw.get("recipient") or ""),
             body=str(raw.get("body") or ""),
             subject=raw.get("subject"),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.CLICK.value:
+        return ClickAction(
+            view_id=raw.get("view_id"),
+            text=raw.get("text"),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.LONG_CLICK.value:
+        return LongClickAction(
+            view_id=raw.get("view_id"),
+            text=raw.get("text"),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.TYPE_TEXT.value:
+        return TypeTextAction(
+            view_id=raw.get("view_id"),
+            text=raw.get("text"),
+            value=str(raw.get("value") or ""),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.SCROLL.value:
+        return ScrollAction(
+            direction=str(raw.get("direction") or "down"),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.TAP_COORDINATE.value:
+        return TapCoordinateAction(
+            x=float(raw.get("x") or 0.0),
+            y=float(raw.get("y") or 0.0),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.SWIPE_COORDINATE.value:
+        return SwipeCoordinateAction(
+            x1=float(raw.get("x1") or 0.0),
+            y1=float(raw.get("y1") or 0.0),
+            x2=float(raw.get("x2") or 0.0),
+            y2=float(raw.get("y2") or 0.0),
+            duration_ms=int(raw.get("duration_ms") or 300),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.NAVIGATE.value:
+        return NavigateAction(
+            action=str(raw.get("action") or "back"),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.WAIT.value:
+        return WaitAction(
+            ms=int(raw.get("ms") or 1000),
         ).model_dump(mode="json")
 
     return {"type": ActionType.NONE.value}

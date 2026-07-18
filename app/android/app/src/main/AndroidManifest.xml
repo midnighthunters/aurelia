@@ -73,9 +73,17 @@
         android:name=".nativemodules.CheckInHeadlessService"
         android:exported="false" />
 
-      <!--
-        Phase 2+ only — do NOT enable AccessibilityAutomationService until explicit go-ahead.
-        Tier 2 hands-free send lives here when built.
-      -->
+      <service
+        android:name=".nativemodules.AccessibilityAutomationService"
+        android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+        android:exported="true"
+        android:label="Aurelia Agent Automation Service">
+        <intent-filter>
+            <action android:name="android.accessibilityservice.AccessibilityService" />
+        </intent-filter>
+        <meta-data
+            android:name="android.accessibilityservice"
+            android:resource="@xml/accessibility_service_config" />
+      </service>
     </application>
 </manifest>

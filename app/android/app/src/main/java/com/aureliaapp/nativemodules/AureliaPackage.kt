@@ -14,6 +14,7 @@ class AureliaPackage : ReactPackage {
       WakeWordModule(reactContext),
       CalendarModule(reactContext),
       ScreenCaptureModule(reactContext),
+      AccessibilityModule(reactContext),
     )
   }
 

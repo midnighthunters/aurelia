@@ -125,6 +125,8 @@ async function openMessage(action: Extract<ActionPayload, {type: 'send_message'}
   }
 }
 
+import {Accessibility} from './Accessibility';
+
 /**
  * Execute a structured action from the brain. Safe no-op for type "none".
  * Always be upfront when opening another app (message channels).
@@ -138,6 +140,77 @@ export async function executeAction(action: ActionPayload | null | undefined): P
   }
   if (action.type === 'send_message') {
     return openMessage(action);
+  }
+  if (action.type === 'click') {
+    const ok = await Accessibility.click(action.view_id ?? null, action.text ?? null);
+    return {
+      ok,
+      kind: 'none',
+      message: `click id=${action.view_id} text=${action.text} ok=${ok}`,
+      speakHint: ok ? undefined : 'I was unable to click that item. Is it visible?'
+    };
+  }
+  if (action.type === 'long_click') {
+    const ok = await Accessibility.longClick(action.view_id ?? null, action.text ?? null);
+    return {
+      ok,
+      kind: 'none',
+      message: `long_click id=${action.view_id} text=${action.text} ok=${ok}`,
+      speakHint: ok ? undefined : 'I was unable to long press that item.'
+    };
+  }
+  if (action.type === 'type_text') {
+    const ok = await Accessibility.typeText(action.view_id ?? null, action.text ?? null, action.value);
+    return {
+      ok,
+      kind: 'none',
+      message: `type_text id=${action.view_id} text=${action.text} ok=${ok}`,
+      speakHint: ok ? undefined : 'I was unable to enter text into that field.'
+    };
+  }
+  if (action.type === 'scroll') {
+    const ok = await Accessibility.scroll(action.direction);
+    return {
+      ok,
+      kind: 'none',
+      message: `scroll direction=${action.direction} ok=${ok}`,
+      speakHint: ok ? undefined : 'I could not scroll further.'
+    };
+  }
+  if (action.type === 'tap_coordinate') {
+    const ok = await Accessibility.tapCoordinate(action.x, action.y);
+    return {
+      ok,
+      kind: 'none',
+      message: `tap x=${action.x} y=${action.y} ok=${ok}`,
+      speakHint: ok ? undefined : 'I could not tap those coordinates.'
+    };
+  }
+  if (action.type === 'swipe_coordinate') {
+    const ok = await Accessibility.swipeCoordinate(action.x1, action.y1, action.x2, action.y2, action.duration_ms ?? 300);
+    return {
+      ok,
+      kind: 'none',
+      message: `swipe x1=${action.x1} y1=${action.y1} x2=${action.x2} y2=${action.y2} ok=${ok}`,
+      speakHint: ok ? undefined : 'I could not swipe across those coordinates.'
+    };
+  }
+  if (action.type === 'navigate') {
+    const ok = await Accessibility.navigate(action.action);
+    return {
+      ok,
+      kind: 'none',
+      message: `navigate action=${action.action} ok=${ok}`
+    };
+  }
+  if (action.type === 'wait') {
+    const ms = action.ms ?? 1000;
+    await new Promise(resolve => setTimeout(resolve, ms));
+    return {
+      ok: true,
+      kind: 'none',
+      message: `wait ms=${ms}`
+    };
   }
   return {
     ok: false,

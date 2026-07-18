@@ -23,6 +23,47 @@ export type ActionPayload =
       recipient: string;
       body: string;
       subject?: string | null;
+    }
+  | {
+      type: 'click';
+      view_id?: string | null;
+      text?: string | null;
+    }
+  | {
+      type: 'long_click';
+      view_id?: string | null;
+      text?: string | null;
+    }
+  | {
+      type: 'type_text';
+      view_id?: string | null;
+      text?: string | null;
+      value: string;
+    }
+  | {
+      type: 'scroll';
+      direction: 'up' | 'down';
+    }
+  | {
+      type: 'tap_coordinate';
+      x: number;
+      y: number;
+    }
+  | {
+      type: 'swipe_coordinate';
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+      duration_ms?: number;
+    }
+  | {
+      type: 'navigate';
+      action: 'back' | 'home' | 'recents' | 'notifications';
+    }
+  | {
+      type: 'wait';
+      ms?: number;
     };
 
 export type ReplyResponse = {
