@@ -295,6 +295,13 @@ export async function executeAction(action: ActionPayload | null | undefined): P
       message: `read_notifications list=${JSON.stringify(list)}`
     };
   }
+  if (action.type === 'save_memory') {
+    return {
+      ok: true,
+      kind: 'none',
+      message: `save_memory text=${action.text}`
+    };
+  }
   return {
     ok: false,
     kind: 'none',

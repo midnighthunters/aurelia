@@ -38,6 +38,7 @@ class ActionType(str, Enum):
     SET_TIMER = "set_timer"
     DIAL_CALL = "dial_call"
     READ_NOTIFICATIONS = "read_notifications"
+    SAVE_MEMORY = "save_memory"
 
 
 class MessageChannel(str, Enum):
@@ -158,6 +159,11 @@ class ReadNotificationsAction(BaseModel):
     type: Literal["read_notifications"] = "read_notifications"
 
 
+class SaveMemoryAction(BaseModel):
+    type: Literal["save_memory"] = "save_memory"
+    text: str
+
+
 class NoAction(BaseModel):
     type: Literal["none"] = "none"
 
@@ -182,6 +188,7 @@ ActionPayload = (
     | SetTimerAction
     | DialCallAction
     | ReadNotificationsAction
+    | SaveMemoryAction
     | NoAction
 )
 
@@ -333,5 +340,10 @@ def parse_action(raw: dict[str, Any] | None) -> dict[str, Any]:
 
     if action_type == ActionType.READ_NOTIFICATIONS.value:
         return ReadNotificationsAction().model_dump(mode="json")
+
+    if action_type == ActionType.SAVE_MEMORY.value:
+        return SaveMemoryAction(
+            text=str(raw.get("text") or ""),
+        ).model_dump(mode="json")
 
     return {"type": ActionType.NONE.value}

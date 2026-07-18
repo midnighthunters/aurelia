@@ -104,6 +104,10 @@ export type ActionPayload =
     }
   | {
       type: 'read_notifications';
+    }
+  | {
+      type: 'save_memory';
+      text: string;
     };
 
 export type ReplyResponse = {

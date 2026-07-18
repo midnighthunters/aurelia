@@ -74,6 +74,10 @@ def reply(body: ReplyRequest) -> ReplyResponse:
         quiet_mode=body.quiet_mode,
         relationships=body.relationships,
     )
+    if action.get("type") == "save_memory":
+        from memory_rag import add_memory
+        add_memory(action.get("text", ""))
+
     store.append(body.session_id, "user", body.transcript)
     store.append(body.session_id, "assistant", reply_text)
     return ReplyResponse(
@@ -124,6 +128,10 @@ async def websocket_stream(websocket: WebSocket):
                     screen_base64=latest_frame
                 )
 
+                if action.get("type") == "save_memory":
+                    from memory_rag import add_memory
+                    add_memory(action.get("text", ""))
+
                 # Record turn in persistent cache
                 store.append(session_id, "user", transcript)
                 store.append(session_id, "assistant", reply_text)
@@ -156,6 +164,10 @@ async def websocket_stream(websocket: WebSocket):
                     client_timezone="UTC",
                     screen_base64=latest_frame
                 )
+
+                if action.get("type") == "save_memory":
+                    from memory_rag import add_memory
+                    add_memory(action.get("text", ""))
 
                 store.append(session_id, "assistant", reply_text)
 
