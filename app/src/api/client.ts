@@ -97,6 +97,13 @@ export type ActionPayload =
       type: 'set_timer';
       seconds: number;
       message: string;
+    }
+  | {
+      type: 'dial_call';
+      number: string;
+    }
+  | {
+      type: 'read_notifications';
     };
 
 export type ReplyResponse = {

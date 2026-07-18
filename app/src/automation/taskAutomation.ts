@@ -127,6 +127,7 @@ async function openMessage(action: Extract<ActionPayload, {type: 'send_message'}
 
 import {Accessibility} from './Accessibility';
 import {DeviceControl} from './DeviceControl';
+import {MessagingUtility} from './MessagingUtility';
 
 /**
  * Execute a structured action from the brain. Safe no-op for type "none".
@@ -276,6 +277,22 @@ export async function executeAction(action: ActionPayload | null | undefined): P
       ok,
       kind: 'none',
       message: `set_timer seconds=${action.seconds} ok=${ok}`
+    };
+  }
+  if (action.type === 'dial_call') {
+    const ok = await MessagingUtility.dialCall(action.number);
+    return {
+      ok,
+      kind: 'none',
+      message: `dial_call number=${action.number} ok=${ok}`
+    };
+  }
+  if (action.type === 'read_notifications') {
+    const list = await MessagingUtility.getRecentNotifications();
+    return {
+      ok: true,
+      kind: 'none',
+      message: `read_notifications list=${JSON.stringify(list)}`
     };
   }
   return {

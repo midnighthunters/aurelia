@@ -36,6 +36,8 @@ class ActionType(str, Enum):
     LAUNCH_APP = "launch_app"
     SET_ALARM = "set_alarm"
     SET_TIMER = "set_timer"
+    DIAL_CALL = "dial_call"
+    READ_NOTIFICATIONS = "read_notifications"
 
 
 class MessageChannel(str, Enum):
@@ -147,6 +149,15 @@ class SetTimerAction(BaseModel):
     message: str = "Timer"
 
 
+class DialCallAction(BaseModel):
+    type: Literal["dial_call"] = "dial_call"
+    number: str
+
+
+class ReadNotificationsAction(BaseModel):
+    type: Literal["read_notifications"] = "read_notifications"
+
+
 class NoAction(BaseModel):
     type: Literal["none"] = "none"
 
@@ -169,6 +180,8 @@ ActionPayload = (
     | LaunchAppAction
     | SetAlarmAction
     | SetTimerAction
+    | DialCallAction
+    | ReadNotificationsAction
     | NoAction
 )
 
@@ -312,5 +325,13 @@ def parse_action(raw: dict[str, Any] | None) -> dict[str, Any]:
             seconds=int(raw.get("seconds") or 60),
             message=str(raw.get("message") or "Timer"),
         ).model_dump(mode="json")
+
+    if action_type == ActionType.DIAL_CALL.value:
+        return DialCallAction(
+            number=str(raw.get("number") or ""),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.READ_NOTIFICATIONS.value:
+        return ReadNotificationsAction().model_dump(mode="json")
 
     return {"type": ActionType.NONE.value}
