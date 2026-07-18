@@ -225,11 +225,44 @@ class BluetoothSessionModule(private val reactContext: ReactApplicationContext) 
     }
   }
 
+  private fun startSco() {
+    val am = reactContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    try {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val devices = am.availableCommunicationDevices
+        val target = devices.firstOrNull { 
+          it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO || it.type == AudioDeviceInfo.TYPE_BLE_HEADSET 
+        }
+        if (target != null) {
+          am.setCommunicationDevice(target)
+        }
+      }
+      am.startBluetoothSco()
+      @Suppress("DEPRECATION")
+      am.isBluetoothScoOn = true
+      am.mode = AudioManager.MODE_IN_COMMUNICATION
+    } catch (_: Exception) {}
+  }
+
+  private fun stopSco() {
+    val am = reactContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    try {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        am.clearCommunicationDevice()
+      }
+      am.stopBluetoothSco()
+      @Suppress("DEPRECATION")
+      am.isBluetoothScoOn = false
+      am.mode = AudioManager.MODE_NORMAL
+    } catch (_: Exception) {}
+  }
+
   private fun emitConnectionState(connected: Boolean) {
     if (connected) emitConnected(currentDeviceName()) else emitDisconnected(null)
   }
 
   private fun emitConnected(name: String?) {
+    startSco()
     val map = Arguments.createMap()
     map.putBoolean("connected", true)
     map.putString("deviceName", name)
@@ -238,6 +271,7 @@ class BluetoothSessionModule(private val reactContext: ReactApplicationContext) 
   }
 
   private fun emitDisconnected(name: String?) {
+    stopSco()
     val map = Arguments.createMap()
     map.putBoolean("connected", false)
     map.putString("deviceName", name)
