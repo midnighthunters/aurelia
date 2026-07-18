@@ -186,7 +186,7 @@ def generate_reply(
         })
     user_content.append({
         "type": "text",
-        "text": transcript
+        "text": transcript if transcript.strip() else "Please evaluate the last action result and decide the next step."
     })
     messages.append({"role": "user", "content": user_content})
 

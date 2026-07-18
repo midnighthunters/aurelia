@@ -12,6 +12,7 @@ import {
   type HistoryTurn,
 } from '../api/client';
 import {executeAction} from '../automation/taskAutomation';
+import {Accessibility} from '../automation/Accessibility';
 import {loadRelationships} from '../automation/relationships';
 import {
   appendTurn,
@@ -132,39 +133,65 @@ export async function runTapToTalkTurn(cb: ConversationCallbacks = {}): Promise<
     // Submit user turn to WebSocket loop
     await streamClient.sendSpeechTurn(transcript, cb.isQuietMode?.() ?? false);
 
-    // Block synchronously until the backend replies or timeout occurs
-    const startWait = Date.now();
-    while (!replyResolved && Date.now() - startWait < 15000) {
-      await new Promise(resolve => setTimeout(resolve, 50));
+    // Active multi-turn Agent Execution Loop
+    let keepRunning = true;
+    let turnCount = 0;
+    const maxAgentTurns = 10;
+    let speakText = '';
+
+    while (keepRunning && turnCount < maxAgentTurns) {
+      replyResolved = false;
+      replyError = null;
+
+      // Block synchronously until the backend replies or timeout occurs
+      const startWait = Date.now();
+      while (!replyResolved && Date.now() - startWait < 15000) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      if (replyError) {
+        throw new Error(replyError);
+      }
+      if (!replyResolved) {
+        throw new Error('Timeout waiting for brain reply');
+      }
+
+      // Record turns in local conversation memory
+      if (turnCount === 0) {
+        await appendTurn('user', transcript);
+      }
+      await appendTurn('assistant', replyText);
+      speakText = replyText;
+
+      const action = replyAction;
+      if (action && action.type !== 'none') {
+        cb.onStatus?.('Running action…');
+        const result = await executeAction(action);
+        cb.onAction?.(action, result.message);
+
+        // Incorporate helper hints
+        if (!speakText && result.speakHint) {
+          speakText = result.speakHint;
+        }
+        if (!result.ok && result.speakHint) {
+          speakText = `${speakText} ${result.speakHint}`.trim();
+        }
+
+        // Get updated accessibility screen tree
+        const layout = await Accessibility.dumpLayoutJSON();
+        const sessionId = await getOrCreateSessionId();
+
+        // Submit action feedback to VLM scheduler for planning next step
+        cb.onStatus?.('Planning next step…');
+        await streamClient.sendActionResult(result.message, result.ok, layout, sessionId);
+        turnCount++;
+      } else {
+        // No action or type 'none': execution finished
+        keepRunning = false;
+      }
     }
 
     streamClient.stopStream();
-
-    if (replyError) {
-      throw new Error(replyError);
-    }
-    if (!replyResolved) {
-      throw new Error('Timeout waiting for brain reply');
-    }
-
-    await appendTurn('user', transcript);
-    await appendTurn('assistant', replyText);
-
-    let speakText = replyText;
-    const action = replyAction;
-    if (action && action.type !== 'none') {
-      cb.onStatus?.('Running action…');
-      const result = await executeAction(action);
-      cb.onAction?.(action, result.message);
-      // Prefer backend reply; fall back to automation speakHint if reply was empty
-      if (!speakText && result.speakHint) {
-        speakText = result.speakHint;
-      }
-      // If action failed and we have a hint, append briefly
-      if (!result.ok && result.speakHint) {
-        speakText = `${speakText} ${result.speakHint}`.trim();
-      }
-    }
 
     cb.onReply?.(speakText);
     cb.onStatus?.('Speaking…');

@@ -29,6 +29,13 @@ class ActionType(str, Enum):
     SWIPE_COORDINATE = "swipe_coordinate"
     NAVIGATE = "navigate"
     WAIT = "wait"
+    TOGGLE_RADIO = "toggle_radio"
+    SET_VOLUME = "set_volume"
+    SET_BRIGHTNESS = "set_brightness"
+    SET_DND = "set_dnd"
+    LAUNCH_APP = "launch_app"
+    SET_ALARM = "set_alarm"
+    SET_TIMER = "set_timer"
 
 
 class MessageChannel(str, Enum):
@@ -100,9 +107,44 @@ class NavigateAction(BaseModel):
     action: str = "back"  # "back" | "home" | "recents" | "notifications"
 
 
-class WaitAction(BaseModel):
-    type: Literal["wait"] = "wait"
-    ms: int = 1000
+class ToggleRadioAction(BaseModel):
+    type: Literal["toggle_radio"] = "toggle_radio"
+    radio: str  # "wifi" | "bluetooth"
+    enabled: bool
+
+
+class SetVolumeAction(BaseModel):
+    type: Literal["set_volume"] = "set_volume"
+    channel: str = "music"  # "music" | "ring" | "notification" | "system"
+    percent: float  # 0.0 to 1.0
+
+
+class SetBrightnessAction(BaseModel):
+    type: Literal["set_brightness"] = "set_brightness"
+    percent: float  # 0.0 to 1.0
+
+
+class SetDndAction(BaseModel):
+    type: Literal["set_dnd"] = "set_dnd"
+    enabled: bool
+
+
+class LaunchAppAction(BaseModel):
+    type: Literal["launch_app"] = "launch_app"
+    app_name: str
+
+
+class SetAlarmAction(BaseModel):
+    type: Literal["set_alarm"] = "set_alarm"
+    hour: int
+    minute: int
+    message: str = "Alarm"
+
+
+class SetTimerAction(BaseModel):
+    type: Literal["set_timer"] = "set_timer"
+    seconds: int
+    message: str = "Timer"
 
 
 class NoAction(BaseModel):
@@ -120,6 +162,13 @@ ActionPayload = (
     | SwipeCoordinateAction
     | NavigateAction
     | WaitAction
+    | ToggleRadioAction
+    | SetVolumeAction
+    | SetBrightnessAction
+    | SetDndAction
+    | LaunchAppAction
+    | SetAlarmAction
+    | SetTimerAction
     | NoAction
 )
 
@@ -222,6 +271,46 @@ def parse_action(raw: dict[str, Any] | None) -> dict[str, Any]:
     if action_type == ActionType.WAIT.value:
         return WaitAction(
             ms=int(raw.get("ms") or 1000),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.TOGGLE_RADIO.value:
+        return ToggleRadioAction(
+            radio=str(raw.get("radio") or "wifi"),
+            enabled=bool(raw.get("enabled", True)),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.SET_VOLUME.value:
+        return SetVolumeAction(
+            channel=str(raw.get("channel") or "music"),
+            percent=float(raw.get("percent") or 0.5),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.SET_BRIGHTNESS.value:
+        return SetBrightnessAction(
+            percent=float(raw.get("percent") or 0.5),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.SET_DND.value:
+        return SetDndAction(
+            enabled=bool(raw.get("enabled", True)),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.LAUNCH_APP.value:
+        return LaunchAppAction(
+            app_name=str(raw.get("app_name") or ""),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.SET_ALARM.value:
+        return SetAlarmAction(
+            hour=int(raw.get("hour") or 0),
+            minute=int(raw.get("minute") or 0),
+            message=str(raw.get("message") or "Alarm"),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.SET_TIMER.value:
+        return SetTimerAction(
+            seconds=int(raw.get("seconds") or 60),
+            message=str(raw.get("message") or "Timer"),
         ).model_dump(mode="json")
 
     return {"type": ActionType.NONE.value}

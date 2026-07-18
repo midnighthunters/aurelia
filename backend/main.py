@@ -135,6 +135,36 @@ async def websocket_stream(websocket: WebSocket):
                     "action": action,
                     "session_id": session_id
                 })
+            elif msg_type == "action_result":
+                session_id = msg.get("session_id", "default_ws_session")
+                result_text = msg.get("result", "")
+                ok = msg.get("ok", True)
+                layout = msg.get("layout", "{}")
+
+                # Log the system action result to the session store
+                store.append(
+                    session_id,
+                    "user",
+                    f"[System Action Result: {result_text}. Screen layout: {layout}]"
+                )
+
+                # Re-run LLM planning based on the new environment state
+                reply_text, action = generate_reply(
+                    transcript="",
+                    history=store.merge_history(session_id, []),
+                    client_now_iso=datetime.datetime.utcnow().isoformat(),
+                    client_timezone="UTC",
+                    screen_base64=latest_frame
+                )
+
+                store.append(session_id, "assistant", reply_text)
+
+                await websocket.send_json({
+                    "type": "reply",
+                    "reply_text": reply_text,
+                    "action": action,
+                    "session_id": session_id
+                })
     except WebSocketDisconnect:
         pass
     except Exception as e:

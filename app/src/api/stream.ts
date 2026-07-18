@@ -97,6 +97,26 @@ class StreamClient {
     );
   }
 
+  async sendActionResult(
+    result: string,
+    ok: boolean,
+    layout: string,
+    sessionId: string,
+  ): Promise<void> {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('WebSocket stream not connected');
+    }
+    this.ws.send(
+      JSON.stringify({
+        type: 'action_result',
+        result,
+        ok,
+        layout,
+        session_id: sessionId,
+      }),
+    );
+  }
+
   stopStream(): void {
     if (this.ws) {
       try {

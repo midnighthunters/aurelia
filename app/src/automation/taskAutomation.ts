@@ -126,6 +126,7 @@ async function openMessage(action: Extract<ActionPayload, {type: 'send_message'}
 }
 
 import {Accessibility} from './Accessibility';
+import {DeviceControl} from './DeviceControl';
 
 /**
  * Execute a structured action from the brain. Safe no-op for type "none".
@@ -210,6 +211,71 @@ export async function executeAction(action: ActionPayload | null | undefined): P
       ok: true,
       kind: 'none',
       message: `wait ms=${ms}`
+    };
+  }
+  if (action.type === 'toggle_radio') {
+    const ok = await DeviceControl.toggleRadio(action.radio, action.enabled);
+    return {
+      ok,
+      kind: 'none',
+      message: `toggle_radio radio=${action.radio} enabled=${action.enabled} ok=${ok}`
+    };
+  }
+  if (action.type === 'set_volume') {
+    const ok = await DeviceControl.setVolume(action.channel, action.percent);
+    return {
+      ok,
+      kind: 'none',
+      message: `set_volume channel=${action.channel} percent=${action.percent} ok=${ok}`
+    };
+  }
+  if (action.type === 'set_brightness') {
+    const ok = await DeviceControl.setBrightness(action.percent);
+    return {
+      ok,
+      kind: 'none',
+      message: `set_brightness percent=${action.percent} ok=${ok}`
+    };
+  }
+  if (action.type === 'set_dnd') {
+    const ok = await DeviceControl.setDndMode(action.enabled);
+    return {
+      ok,
+      kind: 'none',
+      message: `set_dnd enabled=${action.enabled} ok=${ok}`
+    };
+  }
+  if (action.type === 'launch_app') {
+    try {
+      const pkg = await DeviceControl.launchApp(action.app_name);
+      return {
+        ok: true,
+        kind: 'none',
+        message: `launch_app app=${action.app_name} package=${pkg}`
+      };
+    } catch (e: any) {
+      return {
+        ok: false,
+        kind: 'none',
+        message: e?.message || 'App launch failed',
+        speakHint: `I couldn't find an installed app named "${action.app_name}".`
+      };
+    }
+  }
+  if (action.type === 'set_alarm') {
+    const ok = await DeviceControl.setAlarm(action.hour, action.minute, action.message);
+    return {
+      ok,
+      kind: 'none',
+      message: `set_alarm time=${action.hour}:${action.minute} ok=${ok}`
+    };
+  }
+  if (action.type === 'set_timer') {
+    const ok = await DeviceControl.setTimer(action.seconds, action.message);
+    return {
+      ok,
+      kind: 'none',
+      message: `set_timer seconds=${action.seconds} ok=${ok}`
     };
   }
   return {

@@ -15,6 +15,7 @@ class AureliaPackage : ReactPackage {
       CalendarModule(reactContext),
       ScreenCaptureModule(reactContext),
       AccessibilityModule(reactContext),
+      DeviceControlModule(reactContext),
     )
   }
 

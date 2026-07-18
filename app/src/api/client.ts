@@ -64,6 +64,39 @@ export type ActionPayload =
   | {
       type: 'wait';
       ms?: number;
+    }
+  | {
+      type: 'toggle_radio';
+      radio: 'wifi' | 'bluetooth';
+      enabled: boolean;
+    }
+  | {
+      type: 'set_volume';
+      channel: 'music' | 'ring' | 'notification' | 'system';
+      percent: number;
+    }
+  | {
+      type: 'set_brightness';
+      percent: number;
+    }
+  | {
+      type: 'set_dnd';
+      enabled: boolean;
+    }
+  | {
+      type: 'launch_app';
+      app_name: string;
+    }
+  | {
+      type: 'set_alarm';
+      hour: number;
+      minute: number;
+      message: string;
+    }
+  | {
+      type: 'set_timer';
+      seconds: number;
+      message: string;
     };
 
 export type ReplyResponse = {
