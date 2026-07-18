@@ -20,6 +20,7 @@ import {
   getOrCreateSessionId,
 } from '../memory/sessionMemory';
 import {Speech} from './Speech';
+import {streamClient} from '../api/stream';
 
 export type ConversationCallbacks = {
   onStatus?: (status: string) => void;
@@ -65,11 +66,31 @@ export async function runTapToTalkTurn(cb: ConversationCallbacks = {}): Promise<
 
   try {
     cb.onStatus?.('Listening…');
+
+    let replyResolved = false;
+    let replyText = '';
+    let replyAction: ActionPayload = {type: 'none'};
+    let replyError: string | null = null;
+
+    // Start WebSocket stream and screen frame pipeline
+    await streamClient.startStream(
+      (text, action) => {
+        replyText = text;
+        replyAction = action;
+        replyResolved = true;
+      },
+      (err) => {
+        replyError = err;
+        replyResolved = true;
+      }
+    );
+
     // Guardrail: recording only starts here on explicit tap
     const transcript = (await Speech.startListening()).trim();
     endSub.remove();
 
     if (!transcript) {
+      streamClient.stopStream();
       cb.onStatus?.('No speech detected');
       cb.onError?.('Empty transcript');
       return;
@@ -80,6 +101,7 @@ export async function runTapToTalkTurn(cb: ConversationCallbacks = {}): Promise<
 
     const local = detectLocalCommand(transcript);
     if (local === 'quiet_on') {
+      streamClient.stopStream();
       await appendTurn('user', transcript);
       const reply = "Okay — quiet mode on. I won't check in until you turn it off.";
       await appendTurn('assistant', reply);
@@ -93,6 +115,7 @@ export async function runTapToTalkTurn(cb: ConversationCallbacks = {}): Promise<
       return;
     }
     if (local === 'quiet_off') {
+      streamClient.stopStream();
       await appendTurn('user', transcript);
       const reply = 'Quiet mode off. Check-ins are back on.';
       await appendTurn('assistant', reply);
@@ -106,25 +129,29 @@ export async function runTapToTalkTurn(cb: ConversationCallbacks = {}): Promise<
       return;
     }
 
-    const sessionId = await getOrCreateSessionId();
-    const history = await getHistory();
-    const relationships = await loadRelationships();
+    // Submit user turn to WebSocket loop
+    await streamClient.sendSpeechTurn(transcript, cb.isQuietMode?.() ?? false);
 
-    const response = await requestReply({
-      transcript,
-      session_id: sessionId,
-      history,
-      client_now_iso: clientNowIso(),
-      client_timezone: getClientTimezone(),
-      quiet_mode: cb.isQuietMode?.() ?? false,
-      relationships,
-    });
+    // Block synchronously until the backend replies or timeout occurs
+    const startWait = Date.now();
+    while (!replyResolved && Date.now() - startWait < 15000) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    streamClient.stopStream();
+
+    if (replyError) {
+      throw new Error(replyError);
+    }
+    if (!replyResolved) {
+      throw new Error('Timeout waiting for brain reply');
+    }
 
     await appendTurn('user', transcript);
-    await appendTurn('assistant', response.reply_text);
+    await appendTurn('assistant', replyText);
 
-    let speakText = response.reply_text;
-    const action = response.action as ActionPayload;
+    let speakText = replyText;
+    const action = replyAction;
     if (action && action.type !== 'none') {
       cb.onStatus?.('Running action…');
       const result = await executeAction(action);
@@ -148,6 +175,7 @@ export async function runTapToTalkTurn(cb: ConversationCallbacks = {}): Promise<
     cb.onLatencyMs?.(roundTrip);
     cb.onStatus?.('Idle');
   } catch (e: any) {
+    streamClient.stopStream();
     endSub.remove();
     const msg = e?.message || String(e);
     cb.onError?.(msg);

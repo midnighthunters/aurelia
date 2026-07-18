@@ -158,6 +158,7 @@ def generate_reply(
     client_timezone: str,
     quiet_mode: bool = False,
     relationships: dict[str, str] | None = None,
+    screen_base64: str | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """
     Returns (reply_text, action_dict).
@@ -172,7 +173,22 @@ def generate_reply(
         content = turn.get("content", "")
         if content:
             messages.append({"role": role, "content": content})
-    messages.append({"role": "user", "content": transcript})
+
+    user_content: list[dict[str, Any]] = []
+    if screen_base64:
+        user_content.append({
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": "image/jpeg",
+                "data": screen_base64
+            }
+        })
+    user_content.append({
+        "type": "text",
+        "text": transcript
+    })
+    messages.append({"role": "user", "content": user_content})
 
     system = _build_system(client_now_iso, client_timezone, quiet_mode, relationships)
 

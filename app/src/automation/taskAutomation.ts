@@ -76,7 +76,7 @@ async function openMessage(action: Extract<ActionPayload, {type: 'send_message'}
 
   const body = action.body || '';
   let url = '';
-  let appLabel = action.channel;
+  let appLabel: string = action.channel;
 
   switch (action.channel) {
     case 'whatsapp': {

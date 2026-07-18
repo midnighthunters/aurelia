@@ -43,6 +43,8 @@ class ForegroundSchedulerService : Service() {
     const val ACTION_SET_QUIET = "com.aureliaapp.scheduler.SET_QUIET"
     const val ACTION_FIRE_CHECKIN = "com.aureliaapp.scheduler.FIRE_CHECKIN"
     const val ACTION_PHASE0_PROBE = "com.aureliaapp.scheduler.PHASE0_PROBE"
+    const val ACTION_START_PROJECTING = "com.aureliaapp.scheduler.START_PROJECTING"
+    const val ACTION_STOP_PROJECTING = "com.aureliaapp.scheduler.STOP_PROJECTING"
     const val EXTRA_INTERVAL_MS = "intervalMs"
     const val EXTRA_QUIET = "quiet"
     const val EXTRA_PHASE0 = "phase0"
@@ -78,12 +80,27 @@ class ForegroundSchedulerService : Service() {
       }
       context.startService(intent)
     }
+
+    fun startProjecting(context: Context) {
+      val intent = Intent(context, ForegroundSchedulerService::class.java).apply {
+        action = ACTION_START_PROJECTING
+      }
+      context.startService(intent)
+    }
+
+    fun stopProjecting(context: Context) {
+      val intent = Intent(context, ForegroundSchedulerService::class.java).apply {
+        action = ACTION_STOP_PROJECTING
+      }
+      context.startService(intent)
+    }
   }
 
   private val handler = Handler(Looper.getMainLooper())
   private var intervalMs: Long = DEFAULT_INTERVAL_MS
   private var quietMode: Boolean = false
   private var phase0Mode: Boolean = false
+  private var isProjecting: Boolean = false
   private var wakeLock: PowerManager.WakeLock? = null
 
   private val tickRunnable = object : Runnable {
@@ -114,6 +131,16 @@ class ForegroundSchedulerService : Service() {
       ACTION_STOP -> {
         shutdown()
         return START_NOT_STICKY
+      }
+      ACTION_START_PROJECTING -> {
+        isProjecting = true
+        enterForeground()
+        return START_STICKY
+      }
+      ACTION_STOP_PROJECTING -> {
+        isProjecting = false
+        enterForeground()
+        return START_STICKY
       }
       ACTION_SET_INTERVAL -> {
         intervalMs = intent.getLongExtra(EXTRA_INTERVAL_MS, intervalMs).coerceIn(
@@ -167,10 +194,14 @@ class ForegroundSchedulerService : Service() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
       // connectedDevice: long-lived BT headset session companion.
       // mic is only used during explicit tap-to-talk (activity/JS), not continuous in this service.
+      var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+      if (isProjecting) {
+        type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+      }
       startForeground(
         NOTIFICATION_ID,
         notification,
-        ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+        type
       )
     } else {
       startForeground(NOTIFICATION_ID, notification)

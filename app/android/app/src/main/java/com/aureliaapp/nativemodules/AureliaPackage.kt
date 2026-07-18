@@ -13,6 +13,7 @@ class AureliaPackage : ReactPackage {
       SpeechModule(reactContext),
       WakeWordModule(reactContext),
       CalendarModule(reactContext),
+      ScreenCaptureModule(reactContext),
     )
   }
 

@@ -16,7 +16,7 @@ type Listener = (payload: BtPayload) => void;
 const LINKING_ERROR =
   "BluetoothSessionModule is not linked. Rebuild the Android app after adding native modules.";
 
-const NativeBt = NativeModules.BluetoothSessionModule
+const NativeBt = (NativeModules.BluetoothSessionModule
   ? NativeModules.BluetoothSessionModule
   : new Proxy(
       {},
@@ -25,7 +25,7 @@ const NativeBt = NativeModules.BluetoothSessionModule
           throw new Error(LINKING_ERROR);
         },
       },
-    );
+    )) as any;
 
 const emitter =
   Platform.OS === 'android' && NativeModules.BluetoothSessionModule

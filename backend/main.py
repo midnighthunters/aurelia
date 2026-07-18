@@ -9,11 +9,13 @@ GET  /check-in-prompt  optional spoken line for proactive pings
 
 from __future__ import annotations
 
+import datetime
+import json
 import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -85,6 +87,61 @@ def reply(body: ReplyRequest) -> ReplyResponse:
 def clear_session(body: ClearSessionRequest) -> dict:
     store.clear(body.session_id)
     return {"cleared": True, "session_id": body.session_id}
+
+
+@app.websocket("/stream")
+async def websocket_stream(websocket: WebSocket):
+    await websocket.accept()
+    latest_frame: str | None = None
+    try:
+        while True:
+            data = await websocket.receive_text()
+            msg = json.loads(data)
+            msg_type = msg.get("type")
+
+            if msg_type == "screen":
+                latest_frame = msg.get("data")
+            elif msg_type == "turn":
+                transcript = msg.get("transcript", "")
+                session_id = msg.get("session_id", "default_ws_session")
+                history = msg.get("history", [])
+                client_now_iso = msg.get("client_now_iso", datetime.datetime.utcnow().isoformat())
+                client_timezone = msg.get("client_timezone", "UTC")
+                quiet_mode = msg.get("quiet_mode", False)
+                relationships = msg.get("relationships", {})
+
+                # Merge past history with active store
+                merged_history = store.merge_history(session_id, history)
+
+                # Process turn via Multimodal LLM
+                reply_text, action = generate_reply(
+                    transcript=transcript,
+                    history=merged_history,
+                    client_now_iso=client_now_iso,
+                    client_timezone=client_timezone,
+                    quiet_mode=quiet_mode,
+                    relationships=relationships,
+                    screen_base64=latest_frame
+                )
+
+                # Record turn in persistent cache
+                store.append(session_id, "user", transcript)
+                store.append(session_id, "assistant", reply_text)
+
+                # Send structured reply back to client
+                await websocket.send_json({
+                    "type": "reply",
+                    "reply_text": reply_text,
+                    "action": action,
+                    "session_id": session_id
+                })
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        try:
+            await websocket.send_json({"type": "error", "message": str(e)})
+        except:
+            pass
 
 
 if __name__ == "__main__":

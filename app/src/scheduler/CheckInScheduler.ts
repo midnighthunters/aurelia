@@ -8,7 +8,7 @@ import {CONFIG} from '../config';
 
 const LINKING_ERROR = 'SchedulerModule is not linked. Rebuild the Android app.';
 
-const NativeScheduler = NativeModules.SchedulerModule
+const NativeScheduler = (NativeModules.SchedulerModule
   ? NativeModules.SchedulerModule
   : new Proxy(
       {},
@@ -17,7 +17,7 @@ const NativeScheduler = NativeModules.SchedulerModule
           throw new Error(LINKING_ERROR);
         },
       },
-    );
+    )) as any;
 
 const emitter =
   Platform.OS === 'android' && NativeModules.SchedulerModule

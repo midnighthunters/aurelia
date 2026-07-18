@@ -7,7 +7,7 @@ import {NativeEventEmitter, NativeModules, Platform} from 'react-native';
 
 const LINKING_ERROR = 'SpeechModule is not linked. Rebuild the Android app.';
 
-const NativeSpeech = NativeModules.SpeechModule
+const NativeSpeech = (NativeModules.SpeechModule
   ? NativeModules.SpeechModule
   : new Proxy(
       {},
@@ -16,7 +16,7 @@ const NativeSpeech = NativeModules.SpeechModule
           throw new Error(LINKING_ERROR);
         },
       },
-    );
+    )) as any;
 
 const emitter =
   Platform.OS === 'android' && NativeModules.SpeechModule
