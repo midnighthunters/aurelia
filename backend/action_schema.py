@@ -24,6 +24,7 @@ class ActionType(str, Enum):
     CLICK = "click"
     LONG_CLICK = "long_click"
     TYPE_TEXT = "type_text"
+    PASTE_TEXT = "paste_text"
     SCROLL = "scroll"
     TAP_COORDINATE = "tap_coordinate"
     SWIPE_COORDINATE = "swipe_coordinate"
@@ -39,6 +40,13 @@ class ActionType(str, Enum):
     DIAL_CALL = "dial_call"
     READ_NOTIFICATIONS = "read_notifications"
     SAVE_MEMORY = "save_memory"
+    ASK_CLARIFICATION = "ask_clarification"
+    COMPOSE_EMAIL = "compose_email"
+    SEARCH_WEB = "search_web"
+    JOB_SEARCH = "job_search"
+    MEDIA_CONTROL = "media_control"
+    CONTACT_ACTION = "contact_action"
+    CONFIRM_ACTION = "confirm_action"
 
 
 class MessageChannel(str, Enum):
@@ -164,57 +172,63 @@ class SaveMemoryAction(BaseModel):
     text: str
 
 
+class AskClarificationAction(BaseModel):
+    type: Literal["ask_clarification"] = "ask_clarification"
+    question: str
+
+
+class ComposeEmailAction(BaseModel):
+    type: Literal["compose_email"] = "compose_email"
+    to: str
+    subject: str = ""
+    body: str = ""
+    cc: Optional[str] = None
+    bcc: Optional[str] = None
+    attachment_path: Optional[str] = None
+
+
+class SearchWebAction(BaseModel):
+    type: Literal["search_web"] = "search_web"
+    query: str
+    url: Optional[str] = None
+
+
+class JobSearchAction(BaseModel):
+    type: Literal["job_search"] = "job_search"
+    platform: str = "linkedin"  # linkedin | indeed | naukri
+    keywords: str
+    location: str = ""
+    remote: bool = False
+
+
+class MediaControlAction(BaseModel):
+    type: Literal["media_control"] = "media_control"
+    action: str = "play_pause"  # play_pause | play | pause | next | previous | search
+    query: Optional[str] = None
+
+
+class ContactAction(BaseModel):
+    type: Literal["contact_action"] = "contact_action"
+    action: str = "search"  # search | add | edit | share
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+
+
+class ConfirmAction(BaseModel):
+    type: Literal["confirm_action"] = "confirm_action"
+    description: str
+    pending_action: dict[str, Any]
+
+
+class PasteTextAction(BaseModel):
+    type: Literal["paste_text"] = "paste_text"
+    view_id: Optional[str] = None
+    text: Optional[str] = None
+
+
 class NoAction(BaseModel):
     type: Literal["none"] = "none"
-
-
-ActionPayload = (
-    CalendarEventAction
-    | SendMessageAction
-    | ClickAction
-    | LongClickAction
-    | TypeTextAction
-    | ScrollAction
-    | TapCoordinateAction
-    | SwipeCoordinateAction
-    | NavigateAction
-    | WaitAction
-    | ToggleRadioAction
-    | SetVolumeAction
-    | SetBrightnessAction
-    | SetDndAction
-    | LaunchAppAction
-    | SetAlarmAction
-    | SetTimerAction
-    | DialCallAction
-    | ReadNotificationsAction
-    | SaveMemoryAction
-    | NoAction
-)
-
-
-class ReplyRequest(BaseModel):
-    """Client → backend."""
-
-    transcript: str
-    session_id: str
-    # Recent turns for short-term memory (client is source of truth for MVP)
-    history: list[dict[str, str]] = Field(default_factory=list)
-    # Client clock context so "Thursday at 3pm" can be resolved without guessing
-    client_now_iso: str
-    client_timezone: str  # e.g. "America/New_York" or "Asia/Kolkata"
-    quiet_mode: bool = False
-    # Known relationship aliases for the LLM prompt (name → hint string)
-    relationships: dict[str, str] = Field(default_factory=dict)
-
-
-class ReplyResponse(BaseModel):
-    """Backend → client."""
-
-    reply_text: str
-    action: dict[str, Any] = Field(default_factory=lambda: {"type": "none"})
-    # Echo for client-side memory append
-    session_id: str
 
 
 def parse_action(raw: dict[str, Any] | None) -> dict[str, Any]:
@@ -223,6 +237,61 @@ def parse_action(raw: dict[str, Any] | None) -> dict[str, Any]:
         return {"type": ActionType.NONE.value}
 
     action_type = str(raw.get("type", "none")).lower().strip()
+
+    if action_type == ActionType.ASK_CLARIFICATION.value:
+        return AskClarificationAction(
+            question=str(raw.get("question") or "Could you clarify what you'd like me to do?"),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.COMPOSE_EMAIL.value:
+        return ComposeEmailAction(
+            to=str(raw.get("to") or ""),
+            subject=str(raw.get("subject") or ""),
+            body=str(raw.get("body") or ""),
+            cc=raw.get("cc"),
+            bcc=raw.get("bcc"),
+            attachment_path=raw.get("attachment_path"),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.SEARCH_WEB.value:
+        return SearchWebAction(
+            query=str(raw.get("query") or ""),
+            url=raw.get("url"),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.JOB_SEARCH.value:
+        return JobSearchAction(
+            platform=str(raw.get("platform") or "linkedin"),
+            keywords=str(raw.get("keywords") or ""),
+            location=str(raw.get("location") or ""),
+            remote=bool(raw.get("remote", False)),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.MEDIA_CONTROL.value:
+        return MediaControlAction(
+            action=str(raw.get("action") or "play_pause"),
+            query=raw.get("query"),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.CONTACT_ACTION.value:
+        return ContactAction(
+            action=str(raw.get("action") or "search"),
+            name=str(raw.get("name") or ""),
+            phone=raw.get("phone"),
+            email=raw.get("email"),
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.CONFIRM_ACTION.value:
+        return ConfirmAction(
+            description=str(raw.get("description") or "Confirm this action"),
+            pending_action=raw.get("pending_action") or {"type": "none"},
+        ).model_dump(mode="json")
+
+    if action_type == ActionType.PASTE_TEXT.value:
+        return PasteTextAction(
+            view_id=raw.get("view_id"),
+            text=raw.get("text"),
+        ).model_dump(mode="json")
 
     if action_type == ActionType.CREATE_CALENDAR_EVENT.value:
         return CalendarEventAction(

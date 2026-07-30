@@ -116,4 +116,27 @@ class AccessibilityModule(reactContext: ReactApplicationContext) :
     val success = service.performNavigation(action)
     promise.resolve(success)
   }
+
+  @ReactMethod
+  fun hasSensitiveField(promise: Promise) {
+    val service = getService()
+    if (service == null) {
+      promise.resolve(false)
+      return
+    }
+    promise.resolve(service.hasPasswordOrSensitiveField())
+  }
+
+  @ReactMethod
+  fun pasteText(viewId: String?, text: String?, promise: Promise) {
+    val service = getService()
+    if (service == null) {
+      promise.reject("SERVICE_DISABLED", "Accessibility service disabled")
+      return
+    }
+    val targetId = if (viewId.isNullOrEmpty()) null else viewId
+    val targetText = if (text.isNullOrEmpty()) null else text
+    val success = service.performPasteAction(targetId, targetText)
+    promise.resolve(success)
+  }
 }

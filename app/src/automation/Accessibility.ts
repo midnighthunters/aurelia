@@ -86,4 +86,18 @@ export const Accessibility = {
     }
     return NativeAccess.navigate(action);
   },
+
+  async hasSensitiveField(): Promise<boolean> {
+    if (Platform.OS !== 'android') {
+      return false;
+    }
+    return NativeAccess.hasSensitiveField();
+  },
+
+  async pasteText(viewId: string | null, text: string | null): Promise<boolean> {
+    if (Platform.OS !== 'android') {
+      return false;
+    }
+    return NativeAccess.pasteText(viewId, text);
+  },
 };

@@ -17,6 +17,7 @@ class AureliaPackage : ReactPackage {
       AccessibilityModule(reactContext),
       DeviceControlModule(reactContext),
       MessagingUtilityModule(reactContext),
+      OverlayModule(reactContext),
     )
   }
 

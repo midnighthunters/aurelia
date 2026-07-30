@@ -189,4 +189,149 @@ class DeviceControlModule(private val reactContext: ReactApplicationContext) :
       promise.reject("TIMER_ERROR", e.message, e)
     }
   }
+
+  @ReactMethod
+  fun placeCall(number: String, promise: Promise) {
+    try {
+      val intent = Intent(Intent.ACTION_CALL, android.net.Uri.parse("tel:$number")).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      }
+      reactContext.startActivity(intent)
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("CALL_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun openDialerPrefilled(number: String, promise: Promise) {
+    try {
+      val intent = Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:$number")).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      }
+      reactContext.startActivity(intent)
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("DIALER_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun queryContacts(nameQuery: String, promise: Promise) {
+    try {
+      val resolver = reactContext.contentResolver
+      val cursor = resolver.query(
+        android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+        arrayOf(
+          android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+          android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER
+        ),
+        "${android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?",
+        arrayOf("%$nameQuery%"),
+        null
+      )
+      val results = Arguments.createArray()
+      cursor?.use { c ->
+        val nameIdx = c.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+        val numIdx = c.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER)
+        while (c.moveToNext()) {
+          val item = Arguments.createMap()
+          item.putString("name", if (nameIdx >= 0) c.getString(nameIdx) else "")
+          item.putString("number", if (numIdx >= 0) c.getString(numIdx) else "")
+          results.pushMap(item)
+        }
+      }
+      promise.resolve(results)
+    } catch (e: Exception) {
+      promise.reject("CONTACTS_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun copyToClipboard(label: String, text: String, promise: Promise) {
+    try {
+      val cm = reactContext.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+      val clip = android.content.ClipData.newPlainText(label, text)
+      cm.setPrimaryClip(clip)
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("CLIPBOARD_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun getClipboardText(promise: Promise) {
+    try {
+      val cm = reactContext.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+      val clip = cm.primaryClip
+      if (clip != null && clip.itemCount > 0) {
+        val text = clip.getItemAt(0).text?.toString() ?: ""
+        promise.resolve(text)
+      } else {
+        promise.resolve("")
+      }
+    } catch (e: Exception) {
+      promise.reject("CLIPBOARD_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun openSystemSettings(settingType: String, promise: Promise) {
+    try {
+      val action = when (settingType.lowercase()) {
+        "wifi" -> Settings.ACTION_WIFI_SETTINGS
+        "bluetooth" -> Settings.ACTION_BLUETOOTH_SETTINGS
+        "accessibility" -> Settings.ACTION_ACCESSIBILITY_SETTINGS
+        "application_details" -> Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+        "display" -> Settings.ACTION_DISPLAY_SETTINGS
+        "sound" -> Settings.ACTION_SOUND_SETTINGS
+        else -> Settings.ACTION_SETTINGS
+      }
+      val intent = Intent(action).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (settingType.lowercase() == "application_details") {
+          data = android.net.Uri.parse("package:${reactContext.packageName}")
+        }
+      }
+      reactContext.startActivity(intent)
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("SETTINGS_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun sendMediaKey(action: String, promise: Promise) {
+    try {
+      val keyCode = when (action.lowercase()) {
+        "play_pause" -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+        "play" -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY
+        "pause" -> android.view.KeyEvent.KEYCODE_MEDIA_PAUSE
+        "next" -> android.view.KeyEvent.KEYCODE_MEDIA_NEXT
+        "previous" -> android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS
+        else -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+      }
+      val am = reactContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+      am.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, keyCode))
+      am.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, keyCode))
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("MEDIA_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun requestUninstallApp(packageName: String, promise: Promise) {
+    try {
+      val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
+        data = android.net.Uri.parse("package:$packageName")
+        putExtra(Intent.EXTRA_RETURN_RESULT, true)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      }
+      reactContext.startActivity(intent)
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("UNINSTALL_ERROR", e.message, e)
+    }
+  }
 }

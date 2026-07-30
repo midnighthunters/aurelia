@@ -35,6 +35,10 @@ import {
   speakCheckIn,
 } from './src/voice/conversationLoop';
 import {Speech} from './src/voice/Speech';
+import {TaskPlanner} from './src/agent/TaskPlanner';
+import {ActionExecutor} from './src/agent/ActionExecutor';
+import {ExecutionLogView} from './src/components/ExecutionLogView';
+import {AgentOverlayController} from './src/components/AgentOverlayController';
 
 type LogLine = {ts: number; text: string};
 
@@ -55,11 +59,34 @@ function App(): React.JSX.Element {
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [phase0Running, setPhase0Running] = useState(false);
   const [batterySamples, setBatterySamples] = useState<string[]>([]);
+  const [commandText, setCommandText] = useState('');
+  const [plannerStatus, setPlannerStatus] = useState(TaskPlanner.getStatus());
+  const [plannerMessage, setPlannerMessage] = useState('');
+  const [clarification, setClarification] = useState<string | undefined>(undefined);
   const quietRef = useRef(false);
 
   const log = useCallback((text: string) => {
     setLogs(prev => [{ts: Date.now(), text}, ...prev].slice(0, 80));
   }, []);
+
+  useEffect(() => {
+    const unsub = TaskPlanner.subscribe(st => {
+      setPlannerStatus(st.status);
+      setPlannerMessage(st.lastMessage || '');
+      setClarification(st.clarificationQuestion);
+      if (st.lastMessage) {
+        log(`Agent (${st.status}): ${st.lastMessage}`);
+      }
+    });
+    return () => unsub();
+  }, [log]);
+
+  const onExecuteCommand = async () => {
+    if (!commandText.trim()) return;
+    const text = commandText;
+    setCommandText('');
+    await TaskPlanner.executeTask(text);
+  };
 
   useEffect(() => {
     quietRef.current = quietMode;
@@ -285,9 +312,52 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor="#0B1020" />
+      <AgentOverlayController />
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Aurelia</Text>
-        <Text style={styles.subtitle}>Audio companion · Android MVP</Text>
+        <Text style={styles.title}>Aurelia AI Agent</Text>
+        <Text style={styles.subtitle}>System-Wide Android AI Agent</Text>
+
+        {/* System AI Agent Control Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🤖 System AI Agent Command</Text>
+          <Text style={styles.muted}>
+            Type or speak any instruction (e.g., "Call Mom", "Search for software engineer jobs in Bangalore on LinkedIn", "Set an alarm for 7am").
+          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Type your instruction here..."
+            placeholderTextColor="#667"
+            value={commandText}
+            onChangeText={setCommandText}
+            onSubmitEditing={onExecuteCommand}
+          />
+          <View style={styles.row}>
+            <Pressable style={styles.smallBtn} onPress={onExecuteCommand}>
+              <Text style={styles.smallBtnText}>Run Command</Text>
+            </Pressable>
+            {plannerStatus === 'executing' || plannerStatus === 'planning' ? (
+              <Pressable
+                style={[styles.smallBtn, styles.dangerBtn]}
+                onPress={() => ActionExecutor.abortActiveExecution()}>
+                <Text style={styles.smallBtnText}>Stop / Abort</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {clarification ? (
+            <View style={styles.clarificationBox}>
+              <Text style={styles.clarificationTitle}>❓ Clarification Needed:</Text>
+              <Text style={styles.clarificationText}>{clarification}</Text>
+            </View>
+          ) : null}
+
+          {plannerMessage ? (
+            <Text style={styles.statusBadge}>Status: [{plannerStatus}] {plannerMessage}</Text>
+          ) : null}
+        </View>
+
+        {/* Execution Log Section */}
+        <ExecutionLogView />
 
         <View style={styles.card}>
           <View style={styles.row}>
@@ -516,7 +586,31 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginRight: 8,
   },
-  dangerBtn: {backgroundColor: '#5A2030'},
+  dangerBtn: {backgroundColor: '#F45B69'},
+  clarificationBox: {
+    backgroundColor: '#312217',
+    borderWidth: 1,
+    borderColor: '#F39C12',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+  },
+  clarificationTitle: {
+    color: '#F39C12',
+    fontWeight: 'bold',
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  clarificationText: {
+    color: '#F5E0DC',
+    fontSize: 13,
+  },
+  statusBadge: {
+    color: '#A6E3A1',
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: '600',
+  },
   smallBtnText: {color: '#F4F7FF', fontWeight: '600'},
   relRow: {
     flexDirection: 'row',

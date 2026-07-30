@@ -69,6 +69,7 @@ class AccessibilityAutomationService : AccessibilityService() {
     if (node.isClickable) result.put("clickable", true)
     if (node.isScrollable) result.put("scrollable", true)
     if (node.isEditable) result.put("editable", true)
+    if (node.isPassword) result.put("password", true)
 
     val bounds = Rect()
     node.getBoundsInScreen(bounds)
@@ -96,6 +97,46 @@ class AccessibilityAutomationService : AccessibilityService() {
     }
 
     return result
+  }
+
+  /**
+   * Checks if active window contains password fields or security/PIN/2FA prompts.
+   */
+  fun hasPasswordOrSensitiveField(): Boolean {
+    val root = rootInActiveWindow ?: return false
+    var foundSensitive = false
+    traverseNodes(root) { n ->
+      if (n.isPassword) {
+        foundSensitive = true
+      } else {
+        val t = (n.text?.toString() ?: "") + " " + (n.contentDescription?.toString() ?: "")
+        val lower = t.lowercase()
+        if (lower.contains("enter password") || lower.contains("enter pin") ||
+            lower.contains("2fa") || lower.contains("verification code") ||
+            lower.contains("one time password") || lower.contains("otp")) {
+          foundSensitive = true
+        }
+      }
+    }
+    root.recycle()
+    return foundSensitive
+  }
+
+  /**
+   * Pastes text into an editable node.
+   */
+  fun performPasteAction(viewId: String?, textMatch: String?): Boolean {
+    val root = rootInActiveWindow ?: return false
+    val list = findNodes(root, viewId, textMatch).filter { it.isEditable }
+    if (list.isEmpty()) {
+      root.recycle()
+      return false
+    }
+    val target = list[0]
+    val success = target.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+    list.forEach { it.recycle() }
+    root.recycle()
+    return success
   }
 
   /**

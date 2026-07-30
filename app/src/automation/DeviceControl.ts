@@ -69,4 +69,44 @@ export const DeviceControl = {
     }
     return (NativeDevice as any).setTimer(seconds, message);
   },
+
+  async placeCall(number: string): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    return (NativeDevice as any).placeCall(number);
+  },
+
+  async openDialerPrefilled(number: string): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    return (NativeDevice as any).openDialerPrefilled(number);
+  },
+
+  async queryContacts(nameQuery: string): Promise<Array<{name: string; number: string}>> {
+    if (Platform.OS !== 'android') return [];
+    return (NativeDevice as any).queryContacts(nameQuery);
+  },
+
+  async copyToClipboard(label: string, text: string): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    return (NativeDevice as any).copyToClipboard(label, text);
+  },
+
+  async getClipboardText(): Promise<string> {
+    if (Platform.OS !== 'android') return '';
+    return (NativeDevice as any).getClipboardText();
+  },
+
+  async openSystemSettings(settingType: string): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    return (NativeDevice as any).openSystemSettings(settingType);
+  },
+
+  async sendMediaKey(action: string): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    return (NativeDevice as any).sendMediaKey(action);
+  },
+
+  async requestUninstallApp(packageName: string): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    return (NativeDevice as any).requestUninstallApp(packageName);
+  },
 };

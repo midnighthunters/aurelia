@@ -10,6 +10,53 @@ export type HistoryTurn = {role: 'user' | 'assistant'; content: string};
 export type ActionPayload =
   | {type: 'none'}
   | {
+      type: 'ask_clarification';
+      question: string;
+    }
+  | {
+      type: 'compose_email';
+      to: string;
+      subject: string;
+      body: string;
+      cc?: string | null;
+      bcc?: string | null;
+      attachment_path?: string | null;
+    }
+  | {
+      type: 'search_web';
+      query: string;
+      url?: string | null;
+    }
+  | {
+      type: 'job_search';
+      platform?: string;
+      keywords: string;
+      location?: string;
+      remote?: boolean;
+    }
+  | {
+      type: 'media_control';
+      action: string;
+      query?: string | null;
+    }
+  | {
+      type: 'contact_action';
+      action: string;
+      name: string;
+      phone?: string | null;
+      email?: string | null;
+    }
+  | {
+      type: 'confirm_action';
+      description: string;
+      pending_action: any;
+    }
+  | {
+      type: 'paste_text';
+      view_id?: string | null;
+      text?: string | null;
+    }
+  | {
       type: 'create_calendar_event';
       title: string;
       start_iso: string;
@@ -109,6 +156,24 @@ export type ActionPayload =
       type: 'save_memory';
       text: string;
     };
+
+export async function sendReplyTurn(
+  transcript: string,
+  sessionId: string,
+  history: HistoryTurn[] = [],
+  quietMode = false,
+  relationships: Record<string, string> = {}
+): Promise<ReplyResponse> {
+  return requestReply({
+    transcript,
+    session_id: sessionId,
+    history,
+    client_now_iso: clientNowIso(),
+    client_timezone: getClientTimezone(),
+    quiet_mode: quietMode,
+    relationships,
+  });
+}
 
 export type ReplyResponse = {
   reply_text: string;
