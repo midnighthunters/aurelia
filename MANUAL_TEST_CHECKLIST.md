@@ -48,9 +48,10 @@ This checklist covers all 13 task capability categories and safety/reliability s
 - [ ] **Take Photo**: Say "Take a photo" -> Verify camera launches.
 - [ ] **Open Gallery**: Say "Open gallery" -> Verify gallery opens.
 
-## 9. Media & Volume
+## 9. Media, Music & Feed Scrolling
 - [ ] **Play/Pause Media**: Say "Pause music" -> Verify system media key event pauses playback.
 - [ ] **Adjust Volume**: Say "Set volume to 80%" -> Verify audio stream volume adjusts.
+- [ ] **Insta Scroll**: Say "Scroll Instagram reels for 5 steps every 4 seconds" -> Verify agent launches Instagram, navigates feed/reels, and auto-swipes up every 4 seconds while maintaining omnipresent STOP control monitoring.
 
 ## 10. Maps & Navigation
 - [ ] **Search Location**: Say "Find coffee shops nearby on Maps" -> Verify Google Maps opens with query.

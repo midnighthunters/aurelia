@@ -38,4 +38,16 @@ describe('TaskPlanner & SkillRegistry Unit Tests', () => {
     const isPayment = SafetyGate.isCheckoutOrPaymentScreen(layoutSample);
     expect(isPayment).toBe(true);
   });
+
+  it('correctly maps insta_scroll action to InstaScrollSkillHandler', () => {
+    const action = {type: 'insta_scroll' as const, interval_sec: 5, count: 10};
+    const handler = AppSkillRegistry.getHandler(action);
+    expect(handler).toBeDefined();
+    expect(handler?.appName).toBe('Instagram');
+
+    const steps = AppSkillRegistry.resolveStepPlan(action);
+    expect(steps.length).toBe(3);
+    expect(steps[0].type).toBe('launch_app');
+    expect(steps[2].type).toBe('insta_scroll');
+  });
 });

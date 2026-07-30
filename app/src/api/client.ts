@@ -57,6 +57,11 @@ export type ActionPayload =
       text?: string | null;
     }
   | {
+      type: 'insta_scroll';
+      interval_sec?: number;
+      count?: number;
+    }
+  | {
       type: 'create_calendar_event';
       title: string;
       start_iso: string;

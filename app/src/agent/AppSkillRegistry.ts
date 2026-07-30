@@ -180,6 +180,27 @@ export const SystemSkillHandler: AppSkillHandler = {
   },
 };
 
+// 8. Insta Scroll Skill
+export const InstaScrollSkillHandler: AppSkillHandler = {
+  appName: 'Instagram',
+  packageNames: ['com.instagram.android'],
+  canHandle(action, targetApp) {
+    return (
+      action.type === 'insta_scroll' ||
+      ['instagram', 'reels', 'insta', 'feed scroll'].includes(targetApp?.toLowerCase() || '')
+    );
+  },
+  createStepPlan(action) {
+    const sec = action.type === 'insta_scroll' ? action.interval_sec ?? 5 : 5;
+    const count = action.type === 'insta_scroll' ? action.count ?? 10 : 10;
+    return [
+      {type: 'launch_app', app_name: 'Instagram'},
+      {type: 'wait', ms: 1500},
+      {type: 'insta_scroll', interval_sec: sec, count: count},
+    ];
+  },
+};
+
 // Master App Skill Registry Manager
 class AppSkillRegistryManager {
   private handlers: AppSkillHandler[] = [
@@ -190,6 +211,7 @@ class AppSkillRegistryManager {
     ContactsSkillHandler,
     CalendarSkillHandler,
     SystemSkillHandler,
+    InstaScrollSkillHandler,
   ];
 
   public registerHandler(handler: AppSkillHandler) {

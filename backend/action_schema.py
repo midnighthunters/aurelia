@@ -47,6 +47,7 @@ class ActionType(str, Enum):
     MEDIA_CONTROL = "media_control"
     CONTACT_ACTION = "contact_action"
     CONFIRM_ACTION = "confirm_action"
+    INSTA_SCROLL = "insta_scroll"
 
 
 class MessageChannel(str, Enum):
@@ -227,6 +228,12 @@ class PasteTextAction(BaseModel):
     text: Optional[str] = None
 
 
+class InstaScrollAction(BaseModel):
+    type: Literal["insta_scroll"] = "insta_scroll"
+    interval_sec: int = 5
+    count: int = 10
+
+
 class NoAction(BaseModel):
     type: Literal["none"] = "none"
 
@@ -237,6 +244,12 @@ def parse_action(raw: dict[str, Any] | None) -> dict[str, Any]:
         return {"type": ActionType.NONE.value}
 
     action_type = str(raw.get("type", "none")).lower().strip()
+
+    if action_type == ActionType.INSTA_SCROLL.value:
+        return InstaScrollAction(
+            interval_sec=int(raw.get("interval_sec") or 5),
+            count=int(raw.get("count") or 10),
+        ).model_dump(mode="json")
 
     if action_type == ActionType.ASK_CLARIFICATION.value:
         return AskClarificationAction(

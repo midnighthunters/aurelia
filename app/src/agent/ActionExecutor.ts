@@ -180,6 +180,31 @@ class ActionExecutorManager {
         };
       }
 
+      case 'insta_scroll': {
+        const intervalMs = (action.interval_sec ?? 5) * 1000;
+        const totalCount = action.count ?? 10;
+        let performed = 0;
+
+        for (let i = 0; i < totalCount; i++) {
+          if (this.isAborted) break;
+          // Swipe up (scroll down) across Instagram reels screen coordinates
+          const scrolled = await Accessibility.swipeCoordinate(500, 1500, 500, 300, 300);
+          if (!scrolled) {
+            // Fallback to accessibility scroll forward
+            await Accessibility.scroll('down');
+          }
+          performed++;
+          if (i < totalCount - 1) {
+            await new Promise(resolve => setTimeout(resolve, intervalMs));
+          }
+        }
+        return {
+          ok: true,
+          kind: 'none',
+          message: `Insta Scroll completed ${performed}/${totalCount} reel scrolls every ${action.interval_sec ?? 5}s`,
+        };
+      }
+
       default:
         return await executeAction(action);
     }

@@ -46,6 +46,8 @@ Actions you can execute:
 9) "contact_action": search, add, edit, or share a contact
 10) "click", "long_click", "type_text", "paste_text", "scroll", "tap_coordinate", "swipe_coordinate", "navigate", "wait"
 11) "toggle_radio", "set_volume", "set_brightness", "set_dnd", "launch_app", "set_alarm", "set_timer", "dial_call", "read_notifications", "save_memory"
+12) "insta_scroll": auto-scroll Instagram reels or feed at set intervals:
+    {"type": "insta_scroll", "interval_sec": 5, "count": 10}
 
 Planning & Safety Guidelines:
 - Ask a SINGLE clarifying question only when an essential parameter is missing or ambiguous.
