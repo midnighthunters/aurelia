@@ -1,131 +1,185 @@
-# Aurelia
+<div align="center">
 
-Audio-only AI companion for **Android** (React Native) + **Python/FastAPI** brain.
+# AURELIA
 
-Put on Bluetooth earbuds → the agent is present. Tap to talk, get spoken replies, optional device actions (calendar, pre-filled WhatsApp/SMS/email), and periodic proactive check-ins — without staring at a screen.
+### An AI companion you wear—not another app you watch.
 
-> **Hard constraints (this repo):** Android only · no automated tests · Tier 1 automation only · Claude API key never in the client.  
-> Full brief: [`masterplan.md`](./masterplan.md) · Research: [`RESEARCH_NOTES.md`](./RESEARCH_NOTES.md) · Phase 0 gate: [`PHASE_0_RESULTS.md`](./PHASE_0_RESULTS.md)
+A voice-first Android agent that lives in your Bluetooth earbuds, understands natural language, speaks back, remembers the active conversation, and turns intent into safe device actions.
 
----
+![Android](https://img.shields.io/badge/Android-Only-3DDC84?style=for-the-badge&logo=android&logoColor=white)
+![React Native](https://img.shields.io/badge/React_Native-Voice_UI-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![FastAPI](https://img.shields.io/badge/FastAPI-AI_Brain-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Claude](https://img.shields.io/badge/Claude-Powered-D97757?style=for-the-badge)
 
-## Repo layout
-
-```
-/app                  React Native app (Android target)
-  /src
-    /voice            STT/TTS + tap-to-talk conversation loop
-    /bluetooth        JS wrapper for native BT session monitor
-    /scheduler        Check-in timer state ↔ foreground service
-    /automation       Calendar + WhatsApp/SMS/email Tier 1
-    /memory           Local short-term session memory
-    /api              FastAPI client
-  /android/.../nativemodules
-    BluetoothSessionModule.kt
-    ForegroundSchedulerService.kt
-    SpeechModule.kt
-    CalendarModule.kt
-    SchedulerModule.kt
-    WakeWordModule.kt          (Phase 2 stub)
-/backend              Python + FastAPI
-  main.py             /reply, /session/clear, /health, /check-in-prompt
-  llm.py              Claude wrapper
-  memory.py           Server-side short-term cache
-  action_schema.py    Structured actions
-```
+</div>
 
 ---
 
-## Prerequisites
+## Why Aurelia
 
-- Node 18+, JDK 17, Android SDK, physical phone with Bluetooth earbuds (for real validation)
+Most assistants wait behind a screen. Aurelia is designed for moments when the screen should disappear: walking, commuting, exercising, or moving through a busy day.
+
+Connect your earbuds, tap to speak, and Aurelia runs a complete speech-to-action loop. It can answer through text-to-speech, create calendar events, prepare messages, retain short-term context, and deliver configurable proactive check-ins—all while keeping model credentials off the device.
+
+## What it can do
+
+| Capability | Experience |
+|---|---|
+| Voice conversation | Android speech recognition → Claude → Android text-to-speech |
+| Bluetooth awareness | Detects headset connection state and clears sessions on disconnect |
+| Proactive check-ins | Foreground scheduling service delivers configurable spoken prompts |
+| Calendar actions | Creates events through the Android Calendar Provider |
+| Message preparation | Opens WhatsApp, SMS, or email with recipient and content pre-filled |
+| Session memory | Maintains short-term conversational context for the active session |
+| Quiet mode | Immediately suppresses proactive prompts |
+| Relationship aliases | Resolves phrases such as “text my wife” using on-device mappings |
+
+> [!IMPORTANT]
+> Message actions are intentionally human-in-the-loop: Aurelia prepares the message and the user taps **Send**. Calendar creation can complete directly. Fully autonomous UI interaction is outside the MVP safety boundary.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    A["Bluetooth earbuds"] --> B["React Native experience"]
+    B --> C["Native Kotlin services"]
+    C --> D["Speech-to-text"]
+    D --> E["FastAPI orchestration"]
+    E --> F["Claude + session memory"]
+    F --> G["Structured reply or action"]
+    G --> H["Speech output"]
+    G --> I["Calendar or intent action"]
+```
+
+The client owns device integration and the backend owns intelligence. This boundary prevents the Claude API key from shipping inside the Android application and keeps model orchestration independently replaceable.
+
+### Repository map
+
+```text
+aurelia/
+├── app/
+│   ├── src/
+│   │   ├── api/          # Backend client
+│   │   ├── automation/   # Calendar and messaging actions
+│   │   ├── bluetooth/    # Headset session state
+│   │   ├── memory/       # On-device session context
+│   │   ├── scheduler/    # Proactive check-ins
+│   │   └── voice/        # STT, TTS, and conversation loop
+│   └── android/.../nativemodules/
+│       ├── BluetoothSessionModule.kt
+│       ├── ForegroundSchedulerService.kt
+│       ├── SpeechModule.kt
+│       └── CalendarModule.kt
+└── backend/
+    ├── main.py           # FastAPI endpoints
+    ├── llm.py            # Claude adapter
+    ├── memory.py         # Server-side session cache
+    └── action_schema.py  # Validated device-action contract
+```
+
+## Quick start
+
+### Prerequisites
+
+- Node.js 18+
+- JDK 17 and Android SDK
 - Python 3.11+
-- Anthropic API key
+- An Android device or emulator
+- An Anthropic API key
+- Bluetooth earbuds for end-to-end hardware validation
 
----
-
-## Backend setup
+### 1. Start the AI backend
 
 ```bash
 cd backend
 python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-# source .venv/bin/activate
-pip install -r requirements.txt
-copy .env.example .env   # then set ANTHROPIC_API_KEY
-python main.py
-# → http://0.0.0.0:8000  ·  docs at /docs
 ```
 
----
+Activate the environment:
 
-## Android app setup
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+```bash
+# macOS / Linux
+source .venv/bin/activate
+```
+
+Then install and run:
+
+```bash
+pip install -r requirements.txt
+cp .env.example .env
+# Add ANTHROPIC_API_KEY to .env
+python main.py
+```
+
+The API starts at `http://localhost:8000`; interactive documentation is available at `/docs`.
+
+### 2. Run the Android app
 
 ```bash
 cd app
 npm install
-# Point the brain URL at your machine:
-# - Emulator: default http://10.0.2.2:8000 (already in src/config.ts)
-# - Physical device: edit src/config.ts backendBaseUrl to http://<LAN-IP>:8000
 npx react-native start
-# other terminal:
+```
+
+In a second terminal:
+
+```bash
+cd app
 npx react-native run-android
 ```
 
-### First-run permissions
+The emulator uses `http://10.0.2.2:8000` by default. For a physical device, set `backendBaseUrl` in `app/src/config.ts` to your computer's LAN address.
 
-Mic · notifications · Bluetooth connect · calendar read/write.  
-Accessibility Service is **not** requested (Tier 2 deferred).
+### 3. Grant device permissions
 
-### Relationships (for “text my wife”)
+On first launch, allow microphone, notifications, Bluetooth connection, and calendar access. Relationship aliases are stored locally on the device.
 
-In-app **Relationships** card: alias → E.164 phone or email. Stored only on device.
+## API surface
 
----
-
-## Phase 0 spike (mandatory gate)
-
-1. Wear earbuds, open app, confirm connected.
-2. Tap **Start Phase 0**.
-3. Background the app ≥30 minutes.
-4. Confirm unprompted spoken probes; **Dump logs** for battery lines.
-5. Record results in [`PHASE_0_RESULTS.md`](./PHASE_0_RESULTS.md).
-
-Do not trust battery/latency numbers until this passes on hardware.
-
----
-
-## Phase 1 manual demo checklist
-
-| Step | Check |
+| Endpoint | Purpose |
 |---|---|
-| Bluetooth | Connect buds → UI “connected”; disconnect → “disconnected” + session cleared |
-| Tap-to-talk | Tap → speak → transcript logged |
-| STT→LLM→TTS | Reply spoken through buds; latency logged (target &lt;~2s) |
-| Calendar | “Add dentist Thursday at 3pm” → event in Calendar app |
-| Message | “Text my wife I’ll be late” → WhatsApp/SMS pre-filled; agent says hit send |
-| Check-in | Backgrounded; spoken ping near configured 45–90 min interval |
-| Quiet mode | Toggle or say “quiet mode” / “not now” → no check-ins |
-| Session memory | Mention a fact, ask later same session → remembered; disconnect → forgotten |
+| `GET /health` | Service readiness |
+| `POST /reply` | Transcript-to-reply and structured-action orchestration |
+| `POST /check-in-prompt` | Generate a proactive spoken prompt |
+| `POST /session/clear` | Remove active server-side session context |
 
-**MVP done when:** earbuds on → walk away → unprompted check-in → tap to respond → calendar + text actions work → quiet mode kills outbound pings.
+## Validation
+
+Aurelia uses a deliberate hardware-first manual validation strategy. The key acceptance flow is:
+
+1. Connect Bluetooth earbuds and confirm the active session.
+2. Speak through tap-to-talk and hear the generated response.
+3. Create a calendar event from natural language.
+4. prepare a WhatsApp, SMS, or email message.
+5. Background the app and verify a scheduled spoken check-in.
+6. Enable quiet mode and confirm that outbound prompts stop.
+7. Disconnect the earbuds and verify session memory is cleared.
+
+Use [MANUAL_TEST_CHECKLIST.md](./MANUAL_TEST_CHECKLIST.md) for the full MVP pass and [PHASE_0_RESULTS.md](./PHASE_0_RESULTS.md) for background-execution and battery observations.
+
+## Security and privacy by design
+
+- Provider credentials remain in the backend environment.
+- The microphone is activated only through explicit tap-to-talk in the MVP.
+- Message delivery retains a final user confirmation.
+- Structured action payloads constrain what the model can ask the device to do.
+- Short-term memory is cleared when the Bluetooth session ends.
+- Accessibility-driven autonomous sending is not enabled.
+
+## Product direction
+
+The current build focuses on a dependable voice loop and safe Tier 1 automation. Future exploration includes wake-word activation, long-term memory, context-aware check-ins, call/music interruption handling, and carefully governed hands-free workflows.
+
+See [masterplan.md](./masterplan.md) for the complete product specification, [RESEARCH_NOTES.md](./RESEARCH_NOTES.md) for architectural references, and [PHASE_0_RESULTS.md](./PHASE_0_RESULTS.md) for the hardware gate.
 
 ---
 
-## Guardrails
+<div align="center">
 
-- Claude key only in `backend/.env`
-- No audio capture until tap-to-talk
-- No automated tests (masterplan scope cut)
-- No Tier 2 accessibility send without explicit go-ahead
-- Message actions always announce that the user must tap send; calendar is silent by design
+Built to make AI feel present, useful, and invisible.
 
----
-
-## Phase 2+ (not built)
-
-Wake word (Porcupine) · long-term memory · context-aware check-ins · interruption on call/music · Tier 2 accessibility automation.
-
-Stop after MVP and report latency, battery, and automation accuracy before expanding.
+</div>
