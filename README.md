@@ -4,7 +4,7 @@
 
 ### An AI companion you wear—not another app you watch.
 
-A voice-first Android agent that lives in your Bluetooth earbuds, understands natural language, speaks back, remembers the active conversation, and turns intent into safe device actions
+Voice-first Android agent that lives in your Bluetooth earbuds, understands natural language, speaks back, remembers the active conversation, and turns intent into safe device actions
 
 ![Android](https://img.shields.io/badge/Android-Only-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![React Native](https://img.shields.io/badge/React_Native-Voice_UI-61DAFB?style=for-the-badge&logo=react&logoColor=black)
